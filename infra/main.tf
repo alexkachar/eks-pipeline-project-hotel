@@ -30,3 +30,23 @@ module "eks" {
   ebs_csi_role_arn    = module.iam_roles.ebs_csi_role_arn
   admin_principal_arn = var.admin_principal_arn
 }
+
+module "bastion" {
+  source = "./modules/bastion"
+
+  project_name = var.project_name
+  environment  = var.environment
+  region       = var.region
+  vpc_id       = module.network.vpc_id
+  vpc_cidr     = module.network.vpc_cidr
+
+  # Spec deviation, see modules/bastion/README.md. The bastion is launched
+  # in the runner subnet (NAT egress) rather than the private subnet (no
+  # default route) so its first-boot user-data can download kubectl, helm
+  # and the argocd CLI. SSM-only access posture is unchanged.
+  subnet_id = module.network.runner_subnet_ids[0]
+
+  cluster_name              = module.eks.cluster_name
+  cluster_arn               = module.eks.cluster_arn
+  cluster_security_group_id = module.eks.cluster_security_group_id
+}
