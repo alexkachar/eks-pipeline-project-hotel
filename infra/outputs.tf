@@ -37,3 +37,13 @@ output "bastion_ssm_session_command" {
   description = "Copy-paste command to start an SSM session into the bastion."
   value       = module.bastion.ssm_session_command
 }
+
+output "rds_ssm_parameter_prefix" {
+  description = "SSM Parameter Store prefix where RDS connection params + master password live."
+  value       = module.rds.ssm_parameter_prefix
+}
+
+output "rds_kms_key_arn" {
+  description = "RDS CMK ARN. Future ESO Pod Identity role needs kms:Decrypt on this."
+  value       = module.rds.kms_key_arn
+}
