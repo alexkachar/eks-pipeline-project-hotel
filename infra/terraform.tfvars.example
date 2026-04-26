@@ -1,0 +1,10 @@
+region              = "us-east-1"
+project_name        = "akeks"
+environment         = "portfolio"
+cluster_version     = "1.32"
+
+# Required. ARN of the IAM principal (user or role) that should have cluster
+# admin via an access entry. Without this, the cluster has no admins.
+# Example for an IAM user:
+#   arn:aws:iam::123456789012:user/alex
+admin_principal_arn = "arn:aws:iam::000000000000:user/REPLACE_ME"
