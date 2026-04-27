@@ -7,6 +7,8 @@ data "aws_ssm_parameter" "al2023_ami" {
   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
 }
 
+data "aws_caller_identity" "current" {}
+
 # ---------------------------------------------------------------------------
 # IAM role + instance profile.
 # ---------------------------------------------------------------------------
@@ -41,6 +43,32 @@ resource "aws_iam_role_policy" "describe_cluster" {
   name   = "eks-describe-cluster"
   role   = aws_iam_role.this.id
   policy = data.aws_iam_policy_document.describe_cluster.json
+}
+
+data "aws_iam_policy_document" "ecr_read" {
+  statement {
+    sid       = "ECRGetAuthToken"
+    actions   = ["ecr:GetAuthorizationToken"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "ECRReadBootstrapArtifacts"
+    actions = [
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:BatchGetImage",
+      "ecr:DescribeImages",
+      "ecr:DescribeRepositories",
+      "ecr:GetDownloadUrlForLayer",
+    ]
+    resources = ["arn:aws:ecr:${var.region}:${data.aws_caller_identity.current.account_id}:repository/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "ecr_read" {
+  name   = "ecr-read-bootstrap-artifacts"
+  role   = aws_iam_role.this.id
+  policy = data.aws_iam_policy_document.ecr_read.json
 }
 
 resource "aws_iam_instance_profile" "this" {

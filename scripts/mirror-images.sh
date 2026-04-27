@@ -39,9 +39,11 @@ IMAGES=(
   "registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0=mirror/kube-state-metrics/kube-state-metrics:v2.14.0"
   "docker.io/grafana/grafana:11.3.0=mirror/grafana/grafana:11.3.0"
   "quay.io/prometheus-operator/prometheus-operator:v0.78.1=mirror/prometheus-operator/prometheus-operator:v0.78.1"
+  "quay.io/prometheus-operator/prometheus-config-reloader:v0.78.1=mirror/prometheus-operator/prometheus-config-reloader:v0.78.1"
   "quay.io/kiwigrid/k8s-sidecar:1.28.0=mirror/kiwigrid/k8s-sidecar:1.28.0"
   "registry.k8s.io/ingress-nginx/kube-webhook-certgen:v20221220-controller-v1.5.1-58-g787ea74b6=mirror/ingress-nginx/kube-webhook-certgen:v20221220-controller-v1.5.1-58-g787ea74b6"
   "docker.io/bats/bats:v1.4.1=mirror/bats/bats:v1.4.1"
+  "docker.io/library/busybox:1.31.1=mirror/dockerhub/busybox:1.31.1"
 )
 
 login_ecr() {

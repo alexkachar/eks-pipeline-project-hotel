@@ -5,25 +5,26 @@
 global:
   # ECR registry: <account_id>.dkr.ecr.<region>.amazonaws.com
   # Retrieve with: aws sts get-caller-identity --query Account --output text
-  ecrRegistry: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com
+  ecrRegistry: 038526103886.dkr.ecr.us-east-1.amazonaws.com
   region: us-east-1
   # Terraform output: terraform -chdir=infra output -raw cluster_name
-  clusterName: <PROJECT_NAME>-<ENVIRONMENT>-cluster
+  clusterName: project-hotel-dev-cluster
+  vpcId: vpc-033a66fc0bd62be54
 
 # Shared ALB configuration — all subdomains share one internet-facing ALB
 # via the ALB controller's IngressGroup feature.
 ingress:
   # Must match the ingress.group_name set in the todo Helm values and
   # the groupName annotation on all Ingress objects in this chart.
-  groupName: <PROJECT_NAME>
+  groupName: project-hotel
   scheme: internet-facing
   targetType: ip
   # Terraform output: terraform -chdir=infra output -raw wildcard_certificate_arn
-  certificateArn: <ACM_CERTIFICATE_ARN>
+  certificateArn: arn:aws:acm:us-east-1:038526103886:certificate/0702be4a-814e-44bd-894d-dca6879e62c6
   # Subdomains — must match your Route 53 hosted zone domain.
-  argocdHost: argocd.<DOMAIN_NAME>
-  grafanaHost: grafana.<DOMAIN_NAME>
-  todoHost: todo.<DOMAIN_NAME>
+  argocdHost: argocd.alexanderkachar.com
+  grafanaHost: grafana.alexanderkachar.com
+  todoHost: todo.alexanderkachar.com
 
 # AWS Load Balancer Controller
 lbc:
@@ -42,7 +43,7 @@ prometheus:
   chartVersion: "66.2.1"
   grafana:
     # Terraform output: terraform -chdir=infra output -raw grafana_admin_password_parameter_name
-    adminPasswordSsmParameter: /<PROJECT_NAME>/grafana/admin-password
+    adminPasswordSsmParameter: /project-hotel/grafana/admin-password
     image:
       tag: "11.3.0"
   prometheusImage:
@@ -62,7 +63,7 @@ prometheus:
 todo:
   # Chart version to deploy. CI bumps and pushes the chart after each build;
   # update this value after each release to trigger ArgoCD reconciliation.
-  chartVersion: "0.1.1"
+  chartVersion: "0.1.2"
   # SSM prefix where RDS connection params live (set by the rds Terraform module).
   # Terraform output: terraform -chdir=infra output -raw rds_ssm_parameter_prefix
-  ssmPrefix: /<PROJECT_NAME>/rds
+  ssmPrefix: /project-hotel/rds

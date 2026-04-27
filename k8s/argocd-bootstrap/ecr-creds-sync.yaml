@@ -20,7 +20,7 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: [secrets]
-    resourceNames: [argocd-ecr-creds]
+    resourceNames: [argocd-ecr-creds, argocd-ecr-mirror-creds]
     verbs: [get, patch, update]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -63,10 +63,12 @@ spec:
                 - |
                   set -euo pipefail
                   TOKEN="$(aws ecr get-login-password --region us-east-1)"
-                  kubectl patch secret argocd-ecr-creds \
-                    --namespace argocd \
-                    --type merge \
-                    -p "{\"data\":{\"password\":\"$(echo -n "$TOKEN" | base64 -w0)\",\"username\":\"$(echo -n 'AWS' | base64 -w0)\"}}"
+                  for secret in argocd-ecr-creds argocd-ecr-mirror-creds; do
+                    kubectl patch secret "$secret" \
+                      --namespace argocd \
+                      --type merge \
+                      -p "{\"data\":{\"password\":\"$(echo -n "$TOKEN" | base64 -w0)\",\"username\":\"$(echo -n 'AWS' | base64 -w0)\"}}"
+                  done
                   echo "ECR token refreshed at $(date -u)"
               resources:
                 requests:

@@ -49,12 +49,37 @@ aws ecr get-login-password --region "${REGION}" \
 echo "[3/5] Seeding argocd-ecr-creds Secret..."
 ECR_TOKEN="$(aws ecr get-login-password --region "${REGION}")"
 
-kubectl create secret generic argocd-ecr-creds \
-  --namespace argocd \
-  --from-literal=username=AWS \
-  --from-literal=password="${ECR_TOKEN}" \
-  --dry-run=client -o yaml \
-  | kubectl apply -f -
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-ecr-creds
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  name: ecr-charts
+  type: helm
+  url: ${REGISTRY}/charts
+  enableOCI: "true"
+  username: AWS
+  password: ${ECR_TOKEN}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-ecr-mirror-creds
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  name: ecr-mirror-charts
+  type: helm
+  url: ${REGISTRY}/charts/mirror
+  enableOCI: "true"
+  username: AWS
+  password: ${ECR_TOKEN}
+EOF
 
 # ---------------------------------------------------------------------------
 # Step 4: install / upgrade ArgoCD

@@ -16,10 +16,10 @@ spec:
   project: default
 
   source:
-    repoURL: oci://<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/charts
+    repoURL: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/charts
     chart: platform
     # Pin to a specific version; bump after each `helm push` of the platform chart.
-    targetRevision: 0.1.0
+    targetRevision: 0.1.5
 
     helm:
       releaseName: platform

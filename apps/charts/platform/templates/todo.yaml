@@ -13,7 +13,7 @@ spec:
   project: default
 
   source:
-    repoURL: oci://{{ .Values.global.ecrRegistry }}/charts
+    repoURL: {{ .Values.global.ecrRegistry }}/charts
     chart: todo
     targetRevision: {{ .Values.todo.chartVersion | quote }}
 

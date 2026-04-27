@@ -109,18 +109,3 @@ configs:
     # Run server without TLS; the ALB terminates TLS and forwards plain HTTP
     # internally. Without this the ALB health check gets a TLS handshake error.
     server.insecure: true
-
-  # Repository entry for the ECR OCI chart registry.
-  # The password is refreshed by the ecr-creds-sync CronJob every 6 hours.
-  repositories:
-    ecr-charts:
-      url: oci://<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/charts
-      type: helm
-      name: ecr-charts
-      enableOCI: "true"
-      passwordSecret:
-        name: argocd-ecr-creds
-        key: password
-      usernameSecret:
-        name: argocd-ecr-creds
-        key: username

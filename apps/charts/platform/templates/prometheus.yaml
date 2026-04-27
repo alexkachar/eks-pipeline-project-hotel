@@ -10,7 +10,7 @@ spec:
   project: default
 
   source:
-    repoURL: oci://{{ $r }}/charts/mirror
+    repoURL: {{ $r }}/charts/mirror
     chart: kube-prometheus-stack
     targetRevision: {{ .Values.prometheus.chartVersion | quote }}
 
@@ -36,7 +36,7 @@ spec:
           prometheusConfigReloader:
             image:
               registry: {{ $r }}
-              repository: mirror/prometheus-operator/prometheus-operator
+              repository: mirror/prometheus-operator/prometheus-config-reloader
               tag: {{ .Values.prometheus.prometheusOperatorImage.tag | quote }}
           admissionWebhooks:
             patch:
@@ -82,7 +82,7 @@ spec:
                 cpu: 100m
                 memory: 128Mi
 
-        nodeExporter:
+        prometheus-node-exporter:
           image:
             registry: {{ $r }}
             repository: mirror/prometheus-community/node-exporter
@@ -102,6 +102,11 @@ spec:
             registry: {{ $r }}
             repository: mirror/grafana/grafana
             tag: {{ .Values.prometheus.grafana.image.tag | quote }}
+          initChownData:
+            image:
+              registry: {{ $r }}
+              repository: mirror/dockerhub/busybox
+              tag: "1.31.1"
 
           sidecar:
             image:
@@ -168,6 +173,7 @@ metadata:
     # Wave 1: after ESO CRDs (wave 0) and ClusterSecretStore (wave 1),
     # before kube-prometheus-stack Grafana deployment reads the secret.
     argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   refreshInterval: 1h
   secretStoreRef:

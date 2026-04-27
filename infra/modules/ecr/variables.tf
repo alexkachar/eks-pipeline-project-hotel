@@ -32,9 +32,11 @@ variable "repository_names" {
     "mirror/kube-state-metrics/kube-state-metrics",
     "mirror/grafana/grafana",
     "mirror/prometheus-operator/prometheus-operator",
+    "mirror/prometheus-operator/prometheus-config-reloader",
     "mirror/kiwigrid/k8s-sidecar",
     "mirror/ingress-nginx/kube-webhook-certgen",
     "mirror/bats/bats",
+    "mirror/dockerhub/busybox",
 
     # Mirrored third-party Helm charts. Names must match each chart's
     # internal name from Chart.yaml — `helm push` derives the OCI path
