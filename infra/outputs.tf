@@ -47,3 +47,13 @@ output "rds_kms_key_arn" {
   description = "RDS CMK ARN. Future ESO Pod Identity role needs kms:Decrypt on this."
   value       = module.rds.kms_key_arn
 }
+
+output "ecr_registry_url" {
+  description = "ECR registry URL prefix (account.dkr.ecr.region.amazonaws.com)."
+  value       = module.ecr.registry_url
+}
+
+output "ecr_repository_urls" {
+  description = "Map of ECR repository name → fully-qualified URL."
+  value       = module.ecr.repository_urls
+}
