@@ -67,3 +67,18 @@ output "subdomain_fqdns" {
   description = "Map of subdomain label → fully qualified hostname."
   value       = module.dns.subdomain_fqdns
 }
+
+output "runner_instance_id" {
+  description = "GitHub Actions runner EC2 instance ID."
+  value       = module.runner.instance_id
+}
+
+output "runner_kms_alias" {
+  description = "KMS alias for the GitHub PAT. Pass to `aws ssm put-parameter --key-id` when seeding the PAT."
+  value       = module.runner.kms_alias
+}
+
+output "runner_pat_put_command" {
+  description = "Copy-paste command to seed the GitHub PAT into SSM. Replace ghp_xxx with your actual token."
+  value       = "aws ssm put-parameter --name /${var.project_name}/github/pat --type SecureString --value ghp_xxx --key-id ${module.runner.kms_alias} --overwrite --region ${var.region}"
+}
