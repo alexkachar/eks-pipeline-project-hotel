@@ -9,7 +9,7 @@ spec:
   project: default
 
   source:
-    repoURL: oci://{{ .Values.global.ecrRegistry }}/charts
+    repoURL: oci://{{ .Values.global.ecrRegistry }}/charts/mirror
     chart: external-secrets
     targetRevision: {{ .Values.eso.chartVersion | quote }}
 

@@ -10,7 +10,7 @@ spec:
   project: default
 
   source:
-    repoURL: oci://{{ $r }}/charts
+    repoURL: oci://{{ $r }}/charts/mirror
     chart: kube-prometheus-stack
     targetRevision: {{ .Values.prometheus.chartVersion | quote }}
 

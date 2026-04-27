@@ -22,16 +22,6 @@ spec:
       values: |
         imageRegistry: {{ .Values.global.ecrRegistry }}
 
-        # Image tags are stamped by CI (package-charts.yml). ArgoCD polls
-        # ECR every 3 minutes and syncs when a new chart version appears.
-        frontend:
-          image:
-            tag: latest
-
-        backend:
-          image:
-            tag: latest
-
         rds:
           ssmPrefix: {{ .Values.todo.ssmPrefix }}
 

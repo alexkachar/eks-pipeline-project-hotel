@@ -14,7 +14,7 @@ provider "aws" {
       Project     = var.project_name
       Environment = var.environment
       ManagedBy   = "terraform"
-      Owner       = "<your-github-username>"
+      Owner       = var.github_owner
     }
   }
 }
