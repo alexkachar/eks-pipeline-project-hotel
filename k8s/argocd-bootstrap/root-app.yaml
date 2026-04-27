@@ -1,34 +1,24 @@
 # Root "app-of-apps" Application.
 #
-# This is the single seed manifest applied after ArgoCD is running (step 6 of
-# argocd-install.sh). Once applied, ArgoCD takes over: it pulls the platform
-# Helm chart from ECR OCI and creates child Applications for every platform
-# component (LBC, ESO, kube-prometheus-stack, ingress, todo app).
+# "<ACCOUNT_ID>" is a placeholder substituted at deploy time by argocd-install.sh.
 #
-# Source chart: oci://038526103886.dkr.ecr.us-east-1.amazonaws.com/charts/platform
-# Pushed by CI (package-charts.yml) or manually via scripts/mirror-charts.sh.
-#
-# The `repoURL` matches the repository entry named "ecr-charts" in
-# argocd-values.yaml configs.repositories, which uses the argocd-ecr-creds
-# Secret for ECR authentication.
+# Applied after ArgoCD is running (step 5 of argocd-install.sh). Once applied,
+# ArgoCD pulls the platform Helm chart from ECR OCI and creates child Applications
+# for every platform component (LBC, ESO, kube-prometheus-stack, ingress, todo app).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: root
   namespace: argocd
-  # Finalizer ensures ArgoCD cascades deletion to all child Applications and
-  # their resources when this Application is removed.
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
 
   source:
-    # OCI Helm chart — the parent path; ArgoCD appends the chart name.
-    repoURL: oci://038526103886.dkr.ecr.us-east-1.amazonaws.com/charts
+    repoURL: oci://<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/charts
     chart: platform
-    # Pin to a specific version; bump this after each `helm push` of the platform chart.
-    # "0.1.0" is the initial version from apps/charts/platform/Chart.yaml.
+    # Pin to a specific version; bump after each `helm push` of the platform chart.
     targetRevision: 0.1.0
 
     helm:
@@ -45,8 +35,6 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
-      # Create the destination namespace if it doesn't exist (defensive; it
-      # should already exist from namespace.yaml, but safe to keep).
       - CreateNamespace=true
     retry:
       limit: 5

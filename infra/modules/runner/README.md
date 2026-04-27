@@ -56,7 +56,7 @@ User-data and the registration script are **two separate `templatefile()` calls*
 | `vpc_id` | — |
 | `vpc_cidr` | — |
 | `runner_subnet_id` | — single subnet (AZ-a). Must have NAT egress |
-| `github_owner` | — e.g. `alexkachar` |
+| `github_owner` | — e.g. `your-github-username` |
 | `github_repo` | — e.g. `eks-pipeline-project-hotel` |
 | `pat_ssm_parameter_name` | — e.g. `/<project>/github/pat` |
 | `ecr_repository_arns` | — list of ARNs the runner can push to |

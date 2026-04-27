@@ -45,7 +45,7 @@ spec:
 
         ingress:
           enabled: true
-          host: todo.alexanderkachar.com
+          host: {{ .Values.ingress.todoHost }}
           groupName: {{ .Values.ingress.groupName }}
           scheme: {{ .Values.ingress.scheme }}
           targetType: {{ .Values.ingress.targetType }}

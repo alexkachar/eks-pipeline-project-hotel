@@ -1,9 +1,12 @@
 nameOverride: ""
 fullnameOverride: ""
 
-imageRegistry: 038526103886.dkr.ecr.us-east-1.amazonaws.com
+# ECR registry: <account_id>.dkr.ecr.<region>.amazonaws.com
+# Retrieve with: aws sts get-caller-identity --query Account --output text
+imageRegistry: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com
 
-domainName: alexanderkachar.com
+# Root domain for ingress host construction.
+domainName: <DOMAIN_NAME>
 
 frontend:
   replicaCount: 2
@@ -41,7 +44,8 @@ backend:
       memory: 256Mi
 
 rds:
-  ssmPrefix: /project-hotel/rds
+  # SSM prefix — must match the rds Terraform module output (rds_ssm_parameter_prefix).
+  ssmPrefix: /<PROJECT_NAME>/rds
   secretName: todo-backend-db
 
 externalSecrets:
@@ -56,11 +60,12 @@ externalSecrets:
 
 ingress:
   enabled: true
-  host: todo.alexanderkachar.com
-  groupName: project-hotel
+  host: todo.<DOMAIN_NAME>
+  groupName: <PROJECT_NAME>
   scheme: internet-facing
   targetType: ip
-  certificateArn: arn:aws:acm:us-east-1:038526103886:certificate/0702be4a-814e-44bd-894d-dca6879e62c6
+  # Terraform output: terraform -chdir=infra output -raw wildcard_certificate_arn
+  certificateArn: <ACM_CERTIFICATE_ARN>
   healthcheckPath: /
   listenPorts:
     - HTTP: 80

@@ -1,22 +1,29 @@
 # Platform chart values.
-# All concrete AWS-specific values are set here; the templates reference them
-# so nothing is hardcoded in the Application manifests themselves.
+# Fill in the <PLACEHOLDER> values for your environment before pushing this
+# chart to ECR. All concrete AWS values are sourced from terraform.tfvars.
 
 global:
-  ecrRegistry: 038526103886.dkr.ecr.us-east-1.amazonaws.com
+  # ECR registry: <account_id>.dkr.ecr.<region>.amazonaws.com
+  # Retrieve with: aws sts get-caller-identity --query Account --output text
+  ecrRegistry: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com
   region: us-east-1
-  clusterName: project-hotel-dev-cluster
+  # Terraform output: terraform -chdir=infra output -raw cluster_name
+  clusterName: <PROJECT_NAME>-<ENVIRONMENT>-cluster
 
 # Shared ALB configuration — all subdomains share one internet-facing ALB
 # via the ALB controller's IngressGroup feature.
 ingress:
-  groupName: project-hotel
+  # Must match the ingress.group_name set in the todo Helm values and
+  # the groupName annotation on all Ingress objects in this chart.
+  groupName: <PROJECT_NAME>
   scheme: internet-facing
   targetType: ip
-  certificateArn: arn:aws:acm:us-east-1:038526103886:certificate/0702be4a-814e-44bd-894d-dca6879e62c6
-  # Subdomains that receive ALB alias Route53 records after LBC provisions the ALB.
-  argocdHost: argocd.alexanderkachar.com
-  grafanaHost: grafana.alexanderkachar.com
+  # Terraform output: terraform -chdir=infra output -raw wildcard_certificate_arn
+  certificateArn: <ACM_CERTIFICATE_ARN>
+  # Subdomains — must match your Route 53 hosted zone domain.
+  argocdHost: argocd.<DOMAIN_NAME>
+  grafanaHost: grafana.<DOMAIN_NAME>
+  todoHost: todo.<DOMAIN_NAME>
 
 # AWS Load Balancer Controller
 lbc:
@@ -34,7 +41,8 @@ eso:
 prometheus:
   chartVersion: "66.2.1"
   grafana:
-    adminPasswordSsmParameter: /project-hotel/grafana/admin-password
+    # Terraform output: terraform -chdir=infra output -raw grafana_admin_password_parameter_name
+    adminPasswordSsmParameter: /<PROJECT_NAME>/grafana/admin-password
     image:
       tag: "11.3.0"
   prometheusImage:
@@ -52,8 +60,9 @@ prometheus:
 
 # Todo application
 todo:
-  # Chart version to deploy. CI (package-charts.yml) bumps and pushes the chart;
+  # Chart version to deploy. CI bumps and pushes the chart after each build;
   # update this value after each release to trigger ArgoCD reconciliation.
   chartVersion: "0.1.1"
   # SSM prefix where RDS connection params live (set by the rds Terraform module).
-  ssmPrefix: /project-hotel/rds
+  # Terraform output: terraform -chdir=infra output -raw rds_ssm_parameter_prefix
+  ssmPrefix: /<PROJECT_NAME>/rds

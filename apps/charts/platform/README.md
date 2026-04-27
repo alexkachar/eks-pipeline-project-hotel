@@ -36,7 +36,7 @@ After CI pushes a new `charts/todo:<version>` to ECR, bump `todo.chartVersion` i
 | `global.region` | AWS region |
 | `global.clusterName` | EKS cluster name — passed to LBC so it knows which cluster to watch |
 | `ingress.groupName` | ALB IngressGroup name — all Ingresses share one ALB via this |
-| `ingress.certificateArn` | ACM wildcard cert ARN for `*.alexanderkachar.com` |
+| `ingress.certificateArn` | ACM wildcard cert ARN (`terraform -chdir=infra output -raw wildcard_certificate_arn`) |
 | `ingress.argocdHost` / `grafanaHost` | Fully-qualified hostnames for the two platform UIs |
 | `lbc.chartVersion` | Chart version pinned from `mirror-charts.sh` |
 | `eso.chartVersion` | Chart version pinned from `mirror-charts.sh` |

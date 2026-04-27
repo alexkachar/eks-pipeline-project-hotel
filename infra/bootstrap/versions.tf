@@ -13,7 +13,7 @@ provider "aws" {
       Project     = "akeks"
       Environment = "bootstrap"
       ManagedBy   = "terraform"
-      Owner       = "alexkachar"
+      Owner       = "<your-github-username>"
     }
   }
 }

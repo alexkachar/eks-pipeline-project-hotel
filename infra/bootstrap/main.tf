@@ -5,15 +5,15 @@ variable "region" {
 }
 
 variable "bucket_prefix" {
-  description = "Prefix for the state bucket; a random suffix is appended."
+  description = "Prefix for the state bucket; a random suffix is appended. Use something unique to your account."
   type        = string
-  default     = "alexanderkachar-tfstate"
+  default     = "tfstate"
 }
 
 variable "lock_table_name" {
   description = "DynamoDB table used for Terraform state locks."
   type        = string
-  default     = "alexanderkachar-tf-locks"
+  default     = "tf-locks"
 }
 
 resource "random_id" "suffix" {

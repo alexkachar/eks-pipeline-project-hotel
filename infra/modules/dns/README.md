@@ -32,7 +32,7 @@ A `data` block could reference the ALB by tag once it exists, but the lookup wou
 
 | Name | Default | Notes |
 |---|---|---|
-| `domain_name` | — | e.g. `alexanderkachar.com` |
+| `domain_name` | — | e.g. `yourdomain.com` |
 | `hosted_zone_id` | — | Existing Route 53 zone for `domain_name` |
 | `subdomains` | `["todo", "grafana", "argocd"]` | Labels that should A-record to the ALB |
 | `alb_dns_name` | `null` | ALB DNS name. Leave null in phase 1 |

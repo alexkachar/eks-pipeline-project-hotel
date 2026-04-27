@@ -17,8 +17,8 @@ terraform apply
 | Name | Default |
 |---|---|
 | `region` | `us-east-1` |
-| `bucket_prefix` | `alexanderkachar-tfstate` |
-| `lock_table_name` | `alexanderkachar-tf-locks` |
+| `bucket_prefix` | `tfstate` |
+| `lock_table_name` | `tf-locks` |
 
 ## Outputs
 

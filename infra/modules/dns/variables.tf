@@ -1,5 +1,5 @@
 variable "domain_name" {
-  description = "Apex domain (e.g. alexanderkachar.com). The ACM certificate covers `*.<domain_name>`."
+  description = "Apex domain (e.g. yourdomain.com). The ACM certificate covers `*.<domain_name>`."
   type        = string
 }
 

@@ -5,7 +5,8 @@ on:
     branches:
       - main
     paths:
-      - "apps/charts/**"
+      - "apps/charts/todo/**"
+      - "apps/charts/platform/**"
   workflow_run:
     workflows:
       - "Build Backend"
@@ -17,14 +18,13 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REGISTRY: 038526103886.dkr.ecr.us-east-1.amazonaws.com
   # Parent OCI path: helm push appends the chart's internal name (from Chart.yaml)
   # so "charts" → oci://.../charts/todo:<version>, matching the ECR repo "charts/todo".
   CHART_OCI_PARENT: charts
 
 jobs:
   package-and-push:
-    name: Package & push Helm chart
+    name: Package & push Helm charts
     # When triggered by workflow_run, skip if the upstream job failed.
     if: >
       github.event_name == 'push' ||
@@ -33,16 +33,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
         # workflow_run events land on the ref of the workflow file (main), but
         # we want the commit SHA of the upstream push that triggered the build.
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       # The SHA we embed in the chart's image tags:
       #   - push trigger  → github.sha  (the commit that changed charts/)
       #   - workflow_run  → head_sha of the upstream push (the one that built the image)
-      - name: Resolve image SHA
+      - name: Resolve image SHA and ECR registry
         id: sha
         run: |
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
@@ -50,6 +50,8 @@ jobs:
           else
             echo "value=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "ECR_REGISTRY=${ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com" >> $GITHUB_ENV
 
       - name: Install yq
         env:
@@ -69,7 +71,7 @@ jobs:
           yq -i ".backend.image.tag  = \"${SHA}\"" apps/charts/todo/values.yaml
 
       # Bump the chart patch version: 0.1.3 → 0.1.4
-      - name: Bump chart patch version
+      - name: Bump todo chart patch version
         run: |
           current=$(yq '.version' apps/charts/todo/Chart.yaml)
           IFS='.' read -r major minor patch <<< "$current"
@@ -85,18 +87,35 @@ jobs:
                 --password-stdin \
                 ${{ env.ECR_REGISTRY }}
 
-      - name: Package chart
+      - name: Package todo chart
         run: |
           helm package apps/charts/todo -d /tmp/charts
 
-      - name: Push chart to ECR OCI
+      - name: Push todo chart to ECR OCI
         run: |
           helm push /tmp/charts/todo-${{ env.CHART_VERSION }}.tgz \
             oci://${{ env.ECR_REGISTRY }}/${{ env.CHART_OCI_PARENT }}
 
-      - name: Output chart version
+      - name: Bump platform chart patch version
         run: |
-          echo "### Chart pushed" >> $GITHUB_STEP_SUMMARY
-          echo "- **version**: \`${{ env.CHART_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
+          current=$(yq '.version' apps/charts/platform/Chart.yaml)
+          IFS='.' read -r major minor patch <<< "$current"
+          new_version="${major}.${minor}.$((patch + 1))"
+          yq -i ".version = \"${new_version}\"" apps/charts/platform/Chart.yaml
+          echo "PLATFORM_VERSION=${new_version}" >> $GITHUB_ENV
+
+      - name: Package platform chart
+        run: |
+          helm package apps/charts/platform -d /tmp/charts
+
+      - name: Push platform chart to ECR OCI
+        run: |
+          helm push /tmp/charts/platform-${{ env.PLATFORM_VERSION }}.tgz \
+            oci://${{ env.ECR_REGISTRY }}/${{ env.CHART_OCI_PARENT }}
+
+      - name: Output chart versions
+        run: |
+          echo "### Charts pushed" >> $GITHUB_STEP_SUMMARY
+          echo "- **todo** version: \`${{ env.CHART_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **platform** version: \`${{ env.PLATFORM_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **image tag**: \`${{ steps.sha.outputs.value }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **OCI ref**: \`oci://${{ env.ECR_REGISTRY }}/${{ env.CHART_OCI_PARENT }}/todo:${{ env.CHART_VERSION }}\`" >> $GITHUB_STEP_SUMMARY

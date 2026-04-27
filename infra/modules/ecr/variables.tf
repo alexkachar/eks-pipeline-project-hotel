@@ -18,6 +18,7 @@ variable "repository_names" {
 
     # OCI Helm charts authored in this repo.
     "charts/todo",
+    "charts/platform",
 
     # Mirrored third-party container images (GitOps + platform stack).
     "mirror/argoproj/argocd",

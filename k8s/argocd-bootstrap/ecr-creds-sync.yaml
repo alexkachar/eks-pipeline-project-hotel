@@ -1,21 +1,16 @@
 # CronJob that refreshes the argocd-ecr-creds Secret every 6 hours.
 #
+# "<ACCOUNT_ID>" is a placeholder substituted at deploy time by argocd-install.sh.
+#
 # ECR tokens expire after 12 hours. ArgoCD has no native ECR refresh — this
 # CronJob fills that gap. It runs using the argocd-repo-server ServiceAccount,
 # which has the Pod Identity association to the argocd-ecr IAM role, so it can
 # call ecr:GetAuthorizationToken without any stored credentials.
-#
-# Applied once during bootstrap (argocd-install.sh step 6) and left running
-# permanently. ArgoCD does not manage this resource to avoid a circular
-# dependency: if ArgoCD is down, the CronJob still refreshes the token.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: argocd-repo-server
   namespace: argocd
-  # Pod Identity association in Terraform targets this exact namespace + name.
-  # Creating it here is a no-op if ArgoCD's Helm chart already created it;
-  # kubectl apply is idempotent.
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -61,11 +56,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: ecr-creds-sync
-              # Use the same AWS CLI image already mirrored for the platform.
-              # Reuse the argocd image which ships the AWS CLI on AL2-based builds.
-              # Actually: use the official AWS CLI image (alpine-based, tiny).
-              # Mirror it at: mirror/amazon/aws-cli — add to mirror-images.sh if absent.
-              image: 038526103886.dkr.ecr.us-east-1.amazonaws.com/mirror/argoproj/argocd:v3.0.6
+              image: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/mirror/argoproj/argocd:v3.0.6
               command:
                 - /bin/bash
                 - -c
