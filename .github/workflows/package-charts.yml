@@ -1,0 +1,102 @@
+name: Package Charts
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/charts/**"
+  workflow_run:
+    workflows:
+      - "Build Backend"
+      - "Build Frontend"
+    types:
+      - completed
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 038526103886.dkr.ecr.us-east-1.amazonaws.com
+  # Parent OCI path: helm push appends the chart's internal name (from Chart.yaml)
+  # so "charts" → oci://.../charts/todo:<version>, matching the ECR repo "charts/todo".
+  CHART_OCI_PARENT: charts
+
+jobs:
+  package-and-push:
+    name: Package & push Helm chart
+    # When triggered by workflow_run, skip if the upstream job failed.
+    if: >
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: [self-hosted, linux, x64, vpc]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        # workflow_run events land on the ref of the workflow file (main), but
+        # we want the commit SHA of the upstream push that triggered the build.
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      # The SHA we embed in the chart's image tags:
+      #   - push trigger  → github.sha  (the commit that changed charts/)
+      #   - workflow_run  → head_sha of the upstream push (the one that built the image)
+      - name: Resolve image SHA
+        id: sha
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "value=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install yq
+        env:
+          YQ_VERSION: v4.44.3
+        run: |
+          curl -fsSL \
+            "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" \
+            -o /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+
+      # Stamp both image tags in values.yaml with the commit SHA that produced them.
+      - name: Update image tags in values.yaml
+        env:
+          SHA: ${{ steps.sha.outputs.value }}
+        run: |
+          yq -i ".frontend.image.tag = \"${SHA}\"" apps/charts/todo/values.yaml
+          yq -i ".backend.image.tag  = \"${SHA}\"" apps/charts/todo/values.yaml
+
+      # Bump the chart patch version: 0.1.3 → 0.1.4
+      - name: Bump chart patch version
+        run: |
+          current=$(yq '.version' apps/charts/todo/Chart.yaml)
+          IFS='.' read -r major minor patch <<< "$current"
+          new_version="${major}.${minor}.$((patch + 1))"
+          yq -i ".version = \"${new_version}\"" apps/charts/todo/Chart.yaml
+          echo "CHART_VERSION=${new_version}" >> $GITHUB_ENV
+
+      - name: Login to ECR (Helm OCI)
+        run: |
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} \
+            | helm registry login \
+                --username AWS \
+                --password-stdin \
+                ${{ env.ECR_REGISTRY }}
+
+      - name: Package chart
+        run: |
+          helm package apps/charts/todo -d /tmp/charts
+
+      - name: Push chart to ECR OCI
+        run: |
+          helm push /tmp/charts/todo-${{ env.CHART_VERSION }}.tgz \
+            oci://${{ env.ECR_REGISTRY }}/${{ env.CHART_OCI_PARENT }}
+
+      - name: Output chart version
+        run: |
+          echo "### Chart pushed" >> $GITHUB_STEP_SUMMARY
+          echo "- **version**: \`${{ env.CHART_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **image tag**: \`${{ steps.sha.outputs.value }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **OCI ref**: \`oci://${{ env.ECR_REGISTRY }}/${{ env.CHART_OCI_PARENT }}/todo:${{ env.CHART_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
