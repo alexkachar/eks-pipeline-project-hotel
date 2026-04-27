@@ -23,7 +23,7 @@ Application:
 
 OCI Helm charts:
 - `charts/todo` (this repo's app chart)
-- `charts/mirror/argocd`, `charts/mirror/aws-load-balancer-controller`, `charts/mirror/external-secrets`, `charts/mirror/kube-prometheus-stack`
+- `charts/mirror/argo-cd`, `charts/mirror/aws-load-balancer-controller`, `charts/mirror/external-secrets`, `charts/mirror/kube-prometheus-stack`
 
 Mirrored third-party images:
 - `mirror/argoproj/{argocd,redis,dex}`

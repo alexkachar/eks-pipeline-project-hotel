@@ -32,8 +32,10 @@ variable "repository_names" {
     "mirror/grafana/grafana",
     "mirror/prometheus-operator/prometheus-operator",
 
-    # Mirrored third-party Helm charts.
-    "charts/mirror/argocd",
+    # Mirrored third-party Helm charts. Names must match each chart's
+    # internal name from Chart.yaml — `helm push` derives the OCI path
+    # from that, not the file name. Upstream argo-cd chart uses a hyphen.
+    "charts/mirror/argo-cd",
     "charts/mirror/aws-load-balancer-controller",
     "charts/mirror/external-secrets",
     "charts/mirror/kube-prometheus-stack",
