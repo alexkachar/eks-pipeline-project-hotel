@@ -1,0 +1,188 @@
+{{- $r := .Values.global.ecrRegistry -}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: oci://{{ $r }}/charts
+    chart: kube-prometheus-stack
+    targetRevision: {{ .Values.prometheus.chartVersion | quote }}
+
+    helm:
+      releaseName: kube-prometheus-stack
+      # skipCrds because kube-prometheus-stack CRDs are large and ArgoCD's
+      # 1 MB annotation limit causes "metadata.annotations too long" on sync.
+      # The CRDs are bundled in the chart's crds/ directory and applied
+      # separately via the ServerSideApply sync option below.
+      skipCrds: false
+      values: |
+        # ---------------------------------------------------------------------------
+        # Global image pull — redirect everything at ECR.
+        # ---------------------------------------------------------------------------
+        global:
+          imageRegistry: {{ $r }}
+
+        prometheusOperator:
+          image:
+            registry: {{ $r }}
+            repository: mirror/prometheus-operator/prometheus-operator
+            tag: {{ .Values.prometheus.prometheusOperatorImage.tag | quote }}
+          prometheusConfigReloader:
+            image:
+              registry: {{ $r }}
+              repository: mirror/prometheus-operator/prometheus-operator
+              tag: {{ .Values.prometheus.prometheusOperatorImage.tag | quote }}
+          admissionWebhooks:
+            patch:
+              image:
+                registry: {{ $r }}
+                repository: mirror/ingress-nginx/kube-webhook-certgen
+                tag: v20221220-controller-v1.5.1-58-g787ea74b6
+
+        prometheus:
+          prometheusSpec:
+            image:
+              registry: {{ $r }}
+              repository: mirror/prometheus-community/prometheus
+              tag: {{ .Values.prometheus.prometheusImage.tag | quote }}
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                cpu: 500m
+                memory: 1Gi
+            retention: 7d
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: gp2
+                  accessModes: [ReadWriteOnce]
+                  resources:
+                    requests:
+                      storage: 20Gi
+
+        alertmanager:
+          alertmanagerSpec:
+            image:
+              registry: {{ $r }}
+              repository: mirror/prometheus-community/alertmanager
+              tag: {{ .Values.prometheus.alertmanagerImage.tag | quote }}
+            resources:
+              requests:
+                cpu: 25m
+                memory: 64Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
+
+        nodeExporter:
+          image:
+            registry: {{ $r }}
+            repository: mirror/prometheus-community/node-exporter
+            tag: {{ .Values.prometheus.nodeExporterImage.tag | quote }}
+
+        kube-state-metrics:
+          image:
+            registry: {{ $r }}
+            repository: mirror/kube-state-metrics/kube-state-metrics
+            tag: {{ .Values.prometheus.kubeStateMetricsImage.tag | quote }}
+
+        # ---------------------------------------------------------------------------
+        # Grafana — admin password sourced from SSM via ExternalSecret.
+        # ---------------------------------------------------------------------------
+        grafana:
+          image:
+            registry: {{ $r }}
+            repository: mirror/grafana/grafana
+            tag: {{ .Values.prometheus.grafana.image.tag | quote }}
+
+          sidecar:
+            image:
+              registry: {{ $r }}
+              repository: mirror/kiwigrid/k8s-sidecar
+              tag: {{ .Values.prometheus.k8sSidecarImage.tag | quote }}
+
+          # Admin password is injected from the SSM-backed ExternalSecret below.
+          # The secret key must match what grafana expects: "admin-password".
+          admin:
+            existingSecret: grafana-admin-credentials
+            userKey: admin-user
+            passwordKey: admin-password
+
+          # Grafana ingress is managed by the platform-ingress Application so
+          # the ALB IngressGroup annotation is consistent across all subdomains.
+          ingress:
+            enabled: false
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+          persistence:
+            enabled: true
+            storageClassName: gp2
+            size: 5Gi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # Use server-side apply to avoid annotation size limit on large CRDs.
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+---
+# ExternalSecret that pulls the Grafana admin password from SSM and creates a
+# Kubernetes Secret in the monitoring namespace. Deployed in the same Application
+# as the kube-prometheus-stack so it's available before Grafana starts.
+#
+# Requires the ESO SecretStore to be ready first — ArgoCD's sync wave annotation
+# on this manifest ensures correct ordering.
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: grafana-admin-credentials
+  namespace: monitoring
+  annotations:
+    # Wave 1: after ESO CRDs (wave 0) and ClusterSecretStore (wave 1),
+    # before kube-prometheus-stack Grafana deployment reads the secret.
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: aws-parameter-store
+  target:
+    name: grafana-admin-credentials
+    creationPolicy: Owner
+    # ESO target.template lets us inject static literals alongside remote refs.
+    # admin-user is always "admin"; admin-password comes from SSM.
+    template:
+      data:
+        admin-user: admin
+        admin-password: "{{ "{{" }} .admin_password {{ "}}" }}"
+  data:
+    - secretKey: admin_password
+      remoteRef:
+        key: {{ .Values.prometheus.grafana.adminPasswordSsmParameter }}

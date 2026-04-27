@@ -1,0 +1,6 @@
+apiVersion: v2
+name: platform
+description: App-of-apps platform chart. Defines ArgoCD Application resources for LBC, ESO, kube-prometheus-stack, ingress, and the todo app.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

@@ -1,0 +1,70 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: todo
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # Wave 3 — after LBC (0), ClusterSecretStore (1), and ingress (2).
+    # ESO must be ready before the todo ExternalSecret can sync.
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: default
+
+  source:
+    repoURL: oci://{{ .Values.global.ecrRegistry }}/charts
+    chart: todo
+    targetRevision: {{ .Values.todo.chartVersion | quote }}
+
+    helm:
+      releaseName: todo
+      values: |
+        imageRegistry: {{ .Values.global.ecrRegistry }}
+
+        # Image tags are stamped by CI (package-charts.yml). ArgoCD polls
+        # ECR every 3 minutes and syncs when a new chart version appears.
+        frontend:
+          image:
+            tag: latest
+
+        backend:
+          image:
+            tag: latest
+
+        rds:
+          ssmPrefix: {{ .Values.todo.ssmPrefix }}
+
+        externalSecrets:
+          enabled: true
+          region: {{ .Values.global.region }}
+          # Reference the ClusterSecretStore so ESO can reach SSM from the
+          # todo namespace without a per-namespace SecretStore.
+          secretStoreName: aws-parameter-store
+          secretStoreKind: ClusterSecretStore
+
+        ingress:
+          enabled: true
+          host: todo.alexanderkachar.com
+          groupName: {{ .Values.ingress.groupName }}
+          scheme: {{ .Values.ingress.scheme }}
+          targetType: {{ .Values.ingress.targetType }}
+          certificateArn: {{ .Values.ingress.certificateArn }}
+          healthcheckPath: /api/health
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: todo
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

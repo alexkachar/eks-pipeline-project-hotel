@@ -48,6 +48,10 @@ externalSecrets:
   enabled: true
   refreshInterval: 1h
   secretStoreName: todo-aws-parameter-store
+  # SecretStore (namespace-scoped, created by this chart) or ClusterSecretStore
+  # (cluster-wide, created by the platform chart). Switch to ClusterSecretStore
+  # when deploying via the platform app-of-apps to avoid duplicate stores.
+  secretStoreKind: SecretStore
   region: us-east-1
 
 ingress:

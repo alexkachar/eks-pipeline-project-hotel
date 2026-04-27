@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-secrets
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: oci://{{ .Values.global.ecrRegistry }}/charts
+    chart: external-secrets
+    targetRevision: {{ .Values.eso.chartVersion | quote }}
+
+    helm:
+      releaseName: external-secrets
+      values: |
+        image:
+          repository: {{ .Values.global.ecrRegistry }}/mirror/external-secrets/external-secrets
+          tag: {{ .Values.eso.image.tag | quote }}
+
+        # Webhook and cert-controller share the same image.
+        webhook:
+          image:
+            repository: {{ .Values.global.ecrRegistry }}/mirror/external-secrets/external-secrets
+            tag: {{ .Values.eso.image.tag | quote }}
+
+        certController:
+          image:
+            repository: {{ .Values.global.ecrRegistry }}/mirror/external-secrets/external-secrets
+            tag: {{ .Values.eso.image.tag | quote }}
+
+        # ServiceAccount must match the Pod Identity association in Terraform
+        # (namespace: external-secrets, sa: external-secrets).
+        serviceAccount:
+          create: true
+          name: external-secrets
+          annotations: {}
+
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-secrets
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

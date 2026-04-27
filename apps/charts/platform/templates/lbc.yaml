@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aws-load-balancer-controller
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: oci://{{ .Values.global.ecrRegistry }}/charts
+    chart: aws-load-balancer-controller
+    targetRevision: {{ .Values.lbc.chartVersion | quote }}
+
+    helm:
+      releaseName: aws-load-balancer-controller
+      values: |
+        clusterName: {{ .Values.global.clusterName }}
+        region: {{ .Values.global.region }}
+
+        # Point every image at the ECR mirror.
+        image:
+          repository: {{ .Values.global.ecrRegistry }}/mirror/kubernetes-sigs/aws-load-balancer-controller
+          tag: {{ .Values.lbc.image.tag | quote }}
+
+        # ServiceAccount must match the Pod Identity association in Terraform
+        # (namespace: kube-system, sa: aws-load-balancer-controller).
+        serviceAccount:
+          create: true
+          name: aws-load-balancer-controller
+          # No annotations needed — Pod Identity is association-based, not annotation-based.
+          annotations: {}
+
+        # Disable the default cert-manager dependency; we manage TLS at the ALB listener.
+        enableCertManager: false
+
+        # Webhook cert — generated internally, no cert-manager.
+        keepTLSSecret: true
+
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
