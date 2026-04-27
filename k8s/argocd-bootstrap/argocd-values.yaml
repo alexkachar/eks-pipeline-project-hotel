@@ -1,0 +1,133 @@
+# ArgoCD Helm values for private ECR deployment.
+#
+# Chart: oci://038526103886.dkr.ecr.us-east-1.amazonaws.com/charts/mirror/argo-cd:8.1.2
+# (mirrored from https://argoproj.github.io/argo-helm, chart argo-cd 8.1.2)
+#
+# ECR credential refresh strategy
+# --------------------------------
+# ArgoCD repo-server needs a valid ECR token to pull OCI Helm charts. ECR
+# tokens expire every 12 hours. ArgoCD has no built-in ECR refresh mechanism,
+# so we use a sidecar CronJob pattern:
+#
+#   A Kubernetes CronJob (deployed in root-app.yaml as a plain manifest, not
+#   via ArgoCD itself) runs `aws ecr get-login-password` every 6 hours using
+#   the argocd-repo-server Pod Identity IAM role (no stored credentials) and
+#   patches the `argocd-ecr-creds` Secret with the fresh token. ArgoCD's
+#   repository secret references that Secret via `passwordSecret`.
+#
+# This was chosen over the alternative "helm plugin with credential helper"
+# because: (a) the argo-cd 8.1.x chart ships no native ECR plugin, (b) the
+# Pod Identity credential refresh via a sidecar is auditable and cluster-native,
+# (c) it avoids pinning to a specific argocd-ecr-creds-sync container image.
+
+global:
+  image:
+    repository: 038526103886.dkr.ecr.us-east-1.amazonaws.com/mirror/argoproj/argocd
+    tag: v3.0.6
+
+redis:
+  image:
+    repository: 038526103886.dkr.ecr.us-east-1.amazonaws.com/mirror/argoproj/redis
+    tag: 7.2.8-alpine
+
+dex:
+  image:
+    repository: 038526103886.dkr.ecr.us-east-1.amazonaws.com/mirror/argoproj/dex
+    tag: v2.43.1
+  # Dex is only needed for SSO. Disable it to save memory on the two-node cluster.
+  enabled: false
+
+# ---------------------------------------------------------------------------
+# repo-server — the component that pulls OCI charts from ECR.
+# ---------------------------------------------------------------------------
+repoServer:
+  serviceAccount:
+    create: true
+    # Must match the Pod Identity association created in infra/modules/eks/addons.tf.
+    name: argocd-repo-server
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ---------------------------------------------------------------------------
+# application-controller
+# ---------------------------------------------------------------------------
+controller:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+# ---------------------------------------------------------------------------
+# server (API / UI)
+# ---------------------------------------------------------------------------
+server:
+  # Ingress is created separately via the platform app-of-apps once the AWS
+  # Load Balancer Controller is running. Keeping it disabled here prevents a
+  # race condition during initial bootstrap.
+  ingress:
+    enabled: false
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# ---------------------------------------------------------------------------
+# applicationSet controller
+# ---------------------------------------------------------------------------
+applicationSet:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# ---------------------------------------------------------------------------
+# notifications controller
+# ---------------------------------------------------------------------------
+notifications:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# ---------------------------------------------------------------------------
+# ArgoCD server config
+# ---------------------------------------------------------------------------
+configs:
+  params:
+    # Run server without TLS; the ALB terminates TLS and forwards plain HTTP
+    # internally. Without this the ALB health check gets a TLS handshake error.
+    server.insecure: true
+
+  # Repository entry for the ECR OCI chart registry.
+  # The password is refreshed by the ecr-creds-sync CronJob (root-app.yaml).
+  repositories:
+    ecr-charts:
+      url: oci://038526103886.dkr.ecr.us-east-1.amazonaws.com/charts
+      type: helm
+      name: ecr-charts
+      enableOCI: "true"
+      passwordSecret:
+        name: argocd-ecr-creds
+        key: password
+      usernameSecret:
+        name: argocd-ecr-creds
+        key: username
