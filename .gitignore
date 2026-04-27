@@ -11,3 +11,4 @@ crash.log
 *.log
 apply-infra.md
 CLAUDE.md
+*.tfplan

@@ -6,8 +6,8 @@
 #
 # Note on naming: `helm push <tgz> oci://<registry>/<path>` derives the OCI
 # repository name from the chart's internal name in Chart.yaml — NOT from
-# the file name and NOT from any flag. So `helm push argo-cd-7.7.5.tgz
-# oci://.../charts/mirror` lands in `charts/mirror/argo-cd:7.7.5`.
+# the file name and NOT from any flag. So `helm push argo-cd-8.1.2.tgz
+# oci://.../charts/mirror` lands in `charts/mirror/argo-cd:8.1.2`.
 # The Terraform ECR seed list must use those exact internal names.
 
 set -euo pipefail
@@ -21,10 +21,10 @@ trap 'rm -rf "$WORKDIR"' EXIT
 # format: "<chart_repo_url>|<chart_name>|<version>|<dest_oci_path>"
 # dest_oci_path is the parent OCI path (helm push appends /<chart_name>).
 CHARTS=(
-  "https://argoproj.github.io/argo-helm|argo-cd|7.7.5|charts/mirror"
-  "https://aws.github.io/eks-charts|aws-load-balancer-controller|1.10.1|charts/mirror"
+  "https://argoproj.github.io/argo-helm|argo-cd|8.1.2|charts/mirror"
+  "https://aws.github.io/eks-charts|aws-load-balancer-controller|1.13.0|charts/mirror"
   "https://charts.external-secrets.io|external-secrets|0.10.4|charts/mirror"
-  "https://prometheus-community.github.io/helm-charts|kube-prometheus-stack|65.4.1|charts/mirror"
+  "https://prometheus-community.github.io/helm-charts|kube-prometheus-stack|66.2.1|charts/mirror"
 )
 
 login_helm() {

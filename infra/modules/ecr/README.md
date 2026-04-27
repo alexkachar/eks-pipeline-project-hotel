@@ -33,6 +33,9 @@ Mirrored third-party images:
 - `mirror/kube-state-metrics/kube-state-metrics`
 - `mirror/grafana/grafana`
 - `mirror/prometheus-operator/prometheus-operator`
+- `mirror/kiwigrid/k8s-sidecar`
+- `mirror/ingress-nginx/kube-webhook-certgen`
+- `mirror/bats/bats`
 
 Override `repository_names` to add or remove. Sub-component images discovered when actually deploying the upstream charts (per CLAUDE.md §6.3) should be appended to that list rather than created ad hoc.
 

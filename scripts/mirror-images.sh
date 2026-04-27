@@ -8,6 +8,9 @@
 # `helm template` will reveal the exact image tags each chart pulls — append
 # any missing entries here and re-run. ECR repos are tag-immutable so an
 # accidental tag overwrite will fail loudly.
+#
+# Uses `docker buildx imagetools create` instead of pull/tag/push so registry
+# images and manifest lists are copied without local platform selection issues.
 
 set -euo pipefail
 
@@ -18,29 +21,39 @@ REGISTRY="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
 # format: "<source_image_with_tag>=<dest_repo_with_tag>"
 # source includes the upstream registry; dest is the ECR repo path + tag.
 IMAGES=(
-  # ArgoCD
+  # Argo CD chart 8.1.2 defaults.
   "quay.io/argoproj/argocd:v3.0.6=mirror/argoproj/argocd:v3.0.6"
-  "public.ecr.aws/docker/library/redis:7.4.1-alpine=mirror/argoproj/redis:7.4.1-alpine"
-  "ghcr.io/dexidp/dex:v2.41.1=mirror/argoproj/dex:v2.41.1"
+  "public.ecr.aws/docker/library/redis:7.2.8-alpine=mirror/argoproj/redis:7.2.8-alpine"
+  "ghcr.io/dexidp/dex:v2.43.1=mirror/argoproj/dex:v2.43.1"
 
-  # AWS Load Balancer Controller
+  # AWS Load Balancer Controller chart 1.13.0 default.
   "public.ecr.aws/eks/aws-load-balancer-controller:v2.13.0=mirror/kubernetes-sigs/aws-load-balancer-controller:v2.13.0"
 
-  # External Secrets Operator
-  "ghcr.io/external-secrets/external-secrets:v0.10.4=mirror/external-secrets/external-secrets:v0.10.4"
+  # External Secrets Operator chart 0.10.4 default.
+  "oci.external-secrets.io/external-secrets/external-secrets:v0.10.4=mirror/external-secrets/external-secrets:v0.10.4"
 
-  # kube-prometheus-stack family
+  # kube-prometheus-stack chart 66.2.1 defaults.
   "quay.io/prometheus/prometheus:v2.55.1=mirror/prometheus-community/prometheus:v2.55.1"
   "quay.io/prometheus/alertmanager:v0.27.0=mirror/prometheus-community/alertmanager:v0.27.0"
   "quay.io/prometheus/node-exporter:v1.8.2=mirror/prometheus-community/node-exporter:v1.8.2"
-  "registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.13.0=mirror/kube-state-metrics/kube-state-metrics:v2.13.0"
+  "registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0=mirror/kube-state-metrics/kube-state-metrics:v2.14.0"
   "docker.io/grafana/grafana:11.3.0=mirror/grafana/grafana:11.3.0"
   "quay.io/prometheus-operator/prometheus-operator:v0.78.1=mirror/prometheus-operator/prometheus-operator:v0.78.1"
+  "quay.io/kiwigrid/k8s-sidecar:1.28.0=mirror/kiwigrid/k8s-sidecar:1.28.0"
+  "registry.k8s.io/ingress-nginx/kube-webhook-certgen:v20221220-controller-v1.5.1-58-g787ea74b6=mirror/ingress-nginx/kube-webhook-certgen:v20221220-controller-v1.5.1-58-g787ea74b6"
+  "docker.io/bats/bats:v1.4.1=mirror/bats/bats:v1.4.1"
 )
 
 login_ecr() {
   aws ecr get-login-password --region "$REGION" \
     | docker login --username AWS --password-stdin "$REGISTRY"
+}
+
+require_buildx() {
+  if ! docker buildx version >/dev/null 2>&1; then
+    printf 'ERROR: docker buildx is required for registry-to-registry mirroring.\n' >&2
+    return 1
+  fi
 }
 
 image_exists_in_ecr() {
@@ -62,18 +75,13 @@ mirror_one() {
     return 0
   fi
 
-  printf '[pull] %s\n' "$src"
-  docker pull "$src"
-
   local target="${REGISTRY}/${dest}"
-  printf '[tag]  %s -> %s\n' "$src" "$target"
-  docker tag "$src" "$target"
-
-  printf '[push] %s\n' "$target"
-  docker push "$target"
+  printf '[copy] %s -> %s\n' "$src" "$target"
+  docker buildx imagetools create --tag "$target" "$src"
 }
 
 main() {
+  require_buildx
   login_ecr
   local mirrored=0
   for entry in "${IMAGES[@]}"; do
