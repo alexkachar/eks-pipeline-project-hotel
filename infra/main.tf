@@ -48,6 +48,18 @@ module "rds" {
   cluster_security_group_id = module.eks.cluster_security_group_id
 }
 
+module "dns" {
+  source = "./modules/dns"
+
+  domain_name    = var.domain_name
+  hosted_zone_id = var.hosted_zone_id
+
+  # Phase 1: alb_* are null, only cert + validation CNAMEs are created.
+  # Phase 2: populate both, A-records for each subdomain are added.
+  alb_dns_name = var.alb_dns_name
+  alb_zone_id  = var.alb_zone_id
+}
+
 module "bastion" {
   source = "./modules/bastion"
 

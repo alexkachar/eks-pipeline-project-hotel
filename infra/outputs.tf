@@ -57,3 +57,13 @@ output "ecr_repository_urls" {
   description = "Map of ECR repository name → fully-qualified URL."
   value       = module.ecr.repository_urls
 }
+
+output "wildcard_certificate_arn" {
+  description = "Validated *.<domain_name> ACM certificate. Feed into ALB Ingress annotations."
+  value       = module.dns.certificate_arn
+}
+
+output "subdomain_fqdns" {
+  description = "Map of subdomain label → fully qualified hostname."
+  value       = module.dns.subdomain_fqdns
+}

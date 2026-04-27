@@ -1,10 +1,26 @@
-region              = "us-east-1"
-project_name        = "akeks"
-environment         = "portfolio"
-cluster_version     = "1.32"
+region          = "us-east-1"
+project_name    = "akeks"
+environment     = "portfolio"
+cluster_version = "1.32"
 
 # Required. ARN of the IAM principal (user or role) that should have cluster
 # admin via an access entry. Without this, the cluster has no admins.
 # Example for an IAM user:
 #   arn:aws:iam::123456789012:user/alex
+# If you run terraform under an STS-assumed role, the data source in the eks
+# module resolves the session ARN to the underlying role ARN automatically.
 admin_principal_arn = "arn:aws:iam::000000000000:user/REPLACE_ME"
+
+# DNS — the hosted zone is assumed to already exist in this account.
+domain_name    = "alexanderkachar.com"
+hosted_zone_id = "Z1234567890ABCDEFGHIJ"
+
+# Phase-2 inputs for the dns module. Leave both null on the first apply;
+# after the AWS Load Balancer Controller has provisioned the shared ALB,
+# look them up with:
+#   aws elbv2 describe-load-balancers \
+#     --query 'LoadBalancers[?Scheme==`internet-facing`].[DNSName,CanonicalHostedZoneId]' \
+#     --output text
+# then fill in here and re-apply.
+# alb_dns_name = "k8s-platform-xxxxxx-xxxxxx.us-east-1.elb.amazonaws.com"
+# alb_zone_id  = "Z35SXDOTRQ7X7K"
