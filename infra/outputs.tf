@@ -44,8 +44,18 @@ output "rds_ssm_parameter_prefix" {
 }
 
 output "rds_kms_key_arn" {
-  description = "RDS CMK ARN. Future ESO Pod Identity role needs kms:Decrypt on this."
+  description = "RDS storage CMK ARN."
   value       = module.rds.kms_key_arn
+}
+
+output "ssm_secrets_kms_key_arn" {
+  description = "Shared SSM SecureString CMK ARN used by External Secrets."
+  value       = module.secrets.kms_key_arn
+}
+
+output "grafana_admin_password_parameter_name" {
+  description = "SSM SecureString parameter containing Grafana's admin password."
+  value       = module.secrets.grafana_admin_password_parameter_name
 }
 
 output "ecr_registry_url" {
@@ -81,4 +91,9 @@ output "runner_kms_alias" {
 output "runner_pat_put_command" {
   description = "Copy-paste command to seed the GitHub PAT into SSM. Replace ghp_xxx with your actual token."
   value       = "aws ssm put-parameter --name /${var.project_name}/github/pat --type SecureString --value ghp_xxx --key-id ${module.runner.kms_alias} --overwrite --region ${var.region}"
+}
+
+output "platform_pod_identity_role_arns" {
+  description = "Pod Identity role ARNs for platform workloads."
+  value       = module.iam_roles.pod_identity_role_arns
 }

@@ -23,6 +23,11 @@ variable "cluster_security_group_id" {
   type        = string
 }
 
+variable "ssm_kms_key_id" {
+  description = "KMS key ID used to encrypt the RDS master-password SSM SecureString."
+  type        = string
+}
+
 variable "engine_version" {
   description = "Postgres engine version. Pin to a specific minor (e.g. 16.6) so apply doesn't drift when AWS publishes new patch versions."
   type        = string

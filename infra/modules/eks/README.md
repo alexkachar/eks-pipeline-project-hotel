@@ -19,7 +19,7 @@ Installed in dependency order:
 4. `coredns` — deferred until nodes exist so the Deployment has targets.
 5. `aws-ebs-csi-driver` — deferred until nodes + the `ebs-csi-controller-sa` Pod Identity association exist.
 
-Versions use `data.aws_eks_addon_version` with `most_recent = true` at first apply. Promote to explicit pinned strings in `variables.tf` once a known-good version is captured.
+Versions are pinned in `variables.tf` for EKS 1.35. Refresh them deliberately with `aws eks describe-addon-versions` when upgrading the cluster.
 
 ## Access
 
@@ -27,7 +27,7 @@ A single access entry grants the principal in `admin_principal_arn` the managed 
 
 ## Inputs
 
-`project_name`, `environment`, `cluster_name`, `cluster_version` (default `1.32`), `subnet_ids`, `cluster_role_arn`, `node_role_arn`, `ebs_csi_role_arn`, `admin_principal_arn`, node sizing vars, `cluster_log_retention_days`.
+`project_name`, `environment`, `cluster_name`, `cluster_version` (default `1.35`), `subnet_ids`, `cluster_role_arn`, `node_role_arn`, platform Pod Identity role ARNs, `admin_principal_arn`, node sizing vars, `cluster_log_retention_days`, pinned add-on versions.
 
 ## Outputs
 

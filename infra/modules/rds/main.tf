@@ -4,12 +4,11 @@ locals {
 }
 
 # ---------------------------------------------------------------------------
-# Dedicated CMK. Encrypts both RDS storage at rest and the master-password
-# SSM SecureString. The future External Secrets Operator Pod Identity role
-# will need kms:Decrypt on this key — exposed via the kms_key_arn output.
+# Dedicated CMK for RDS storage at rest. SSM SecureStrings are encrypted with
+# the shared secrets module CMK, which is what External Secrets can decrypt.
 # ---------------------------------------------------------------------------
 resource "aws_kms_key" "rds" {
-  description             = "RDS storage + SSM SecureString encryption for ${local.name}."
+  description             = "RDS storage encryption for ${local.name}."
   enable_key_rotation     = true
   deletion_window_in_days = 7
 
@@ -110,7 +109,7 @@ resource "aws_db_instance" "this" {
 resource "aws_ssm_parameter" "master_password" {
   name   = "${local.ssm_param_prefix}/master-password"
   type   = "SecureString"
-  key_id = aws_kms_key.rds.id
+  key_id = var.ssm_kms_key_id
   value  = random_password.master.result
 
   tags = { Name = "${local.name}-master-password" }

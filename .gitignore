@@ -9,4 +9,5 @@ crash.log
 .DS_Store
 .env
 *.log
+apply-infra.md
 CLAUDE.md

@@ -1,7 +1,7 @@
 region          = "us-east-1"
 project_name    = "akeks"
 environment     = "portfolio"
-cluster_version = "1.32"
+cluster_version = "1.35"
 
 # Required. ARN of the IAM principal (user or role) that should have cluster
 # admin via an access entry. Without this, the cluster has no admins.

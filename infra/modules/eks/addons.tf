@@ -1,37 +1,3 @@
-# Pin to the version AWS considers "most recent" at first apply. Once applied,
-# the version string is frozen in state — capture the returned values and
-# promote to explicit variables on the next iteration.
-
-data "aws_eks_addon_version" "vpc_cni" {
-  addon_name         = "vpc-cni"
-  kubernetes_version = aws_eks_cluster.this.version
-  most_recent        = true
-}
-
-data "aws_eks_addon_version" "kube_proxy" {
-  addon_name         = "kube-proxy"
-  kubernetes_version = aws_eks_cluster.this.version
-  most_recent        = true
-}
-
-data "aws_eks_addon_version" "coredns" {
-  addon_name         = "coredns"
-  kubernetes_version = aws_eks_cluster.this.version
-  most_recent        = true
-}
-
-data "aws_eks_addon_version" "ebs_csi" {
-  addon_name         = "aws-ebs-csi-driver"
-  kubernetes_version = aws_eks_cluster.this.version
-  most_recent        = true
-}
-
-data "aws_eks_addon_version" "pod_identity_agent" {
-  addon_name         = "eks-pod-identity-agent"
-  kubernetes_version = aws_eks_cluster.this.version
-  most_recent        = true
-}
-
 # ---------------------------------------------------------------------------
 # Networking addons — installed right after the cluster so the node group can
 # bring up kubelet with working pod networking.
@@ -39,7 +5,7 @@ data "aws_eks_addon_version" "pod_identity_agent" {
 resource "aws_eks_addon" "vpc_cni" {
   cluster_name                = aws_eks_cluster.this.name
   addon_name                  = "vpc-cni"
-  addon_version               = data.aws_eks_addon_version.vpc_cni.version
+  addon_version               = var.vpc_cni_addon_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
@@ -53,7 +19,7 @@ resource "aws_eks_addon" "vpc_cni" {
 resource "aws_eks_addon" "kube_proxy" {
   cluster_name                = aws_eks_cluster.this.name
   addon_name                  = "kube-proxy"
-  addon_version               = data.aws_eks_addon_version.kube_proxy.version
+  addon_version               = var.kube_proxy_addon_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }
@@ -66,7 +32,7 @@ resource "aws_eks_addon" "kube_proxy" {
 resource "aws_eks_addon" "pod_identity_agent" {
   cluster_name                = aws_eks_cluster.this.name
   addon_name                  = "eks-pod-identity-agent"
-  addon_version               = data.aws_eks_addon_version.pod_identity_agent.version
+  addon_version               = var.pod_identity_agent_addon_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }
@@ -79,7 +45,7 @@ resource "aws_eks_addon" "pod_identity_agent" {
 resource "aws_eks_addon" "coredns" {
   cluster_name                = aws_eks_cluster.this.name
   addon_name                  = "coredns"
-  addon_version               = data.aws_eks_addon_version.coredns.version
+  addon_version               = var.coredns_addon_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
@@ -99,10 +65,37 @@ resource "aws_eks_pod_identity_association" "ebs_csi" {
   depends_on = [aws_eks_addon.pod_identity_agent]
 }
 
+resource "aws_eks_pod_identity_association" "aws_lb_controller" {
+  cluster_name    = aws_eks_cluster.this.name
+  namespace       = "kube-system"
+  service_account = "aws-load-balancer-controller"
+  role_arn        = var.aws_lb_controller_role_arn
+
+  depends_on = [aws_eks_addon.pod_identity_agent]
+}
+
+resource "aws_eks_pod_identity_association" "external_secrets" {
+  cluster_name    = aws_eks_cluster.this.name
+  namespace       = "external-secrets"
+  service_account = "external-secrets"
+  role_arn        = var.external_secrets_role_arn
+
+  depends_on = [aws_eks_addon.pod_identity_agent]
+}
+
+resource "aws_eks_pod_identity_association" "argocd_ecr" {
+  cluster_name    = aws_eks_cluster.this.name
+  namespace       = "argocd"
+  service_account = "argocd-repo-server"
+  role_arn        = var.argocd_ecr_role_arn
+
+  depends_on = [aws_eks_addon.pod_identity_agent]
+}
+
 resource "aws_eks_addon" "ebs_csi" {
   cluster_name                = aws_eks_cluster.this.name
   addon_name                  = "aws-ebs-csi-driver"
-  addon_version               = data.aws_eks_addon_version.ebs_csi.version
+  addon_version               = var.ebs_csi_addon_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 

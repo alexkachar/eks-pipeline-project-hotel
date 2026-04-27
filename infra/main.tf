@@ -10,13 +10,6 @@ module "network" {
   cluster_name = local.cluster_name
 }
 
-module "iam_roles" {
-  source = "./modules/iam-roles"
-
-  project_name = var.project_name
-  environment  = var.environment
-}
-
 module "ecr" {
   source = "./modules/ecr"
 
@@ -24,18 +17,37 @@ module "ecr" {
   environment  = var.environment
 }
 
+module "secrets" {
+  source = "./modules/secrets"
+
+  project_name = var.project_name
+  environment  = var.environment
+}
+
+module "iam_roles" {
+  source = "./modules/iam-roles"
+
+  project_name            = var.project_name
+  environment             = var.environment
+  ssm_secrets_kms_key_arn = module.secrets.kms_key_arn
+  ecr_repository_arns     = values(module.ecr.repository_arns)
+}
+
 module "eks" {
   source = "./modules/eks"
 
-  project_name        = var.project_name
-  environment         = var.environment
-  cluster_name        = local.cluster_name
-  cluster_version     = var.cluster_version
-  subnet_ids          = module.network.private_subnet_ids
-  cluster_role_arn    = module.iam_roles.cluster_role_arn
-  node_role_arn       = module.iam_roles.node_role_arn
-  ebs_csi_role_arn    = module.iam_roles.ebs_csi_role_arn
-  admin_principal_arn = var.admin_principal_arn
+  project_name               = var.project_name
+  environment                = var.environment
+  cluster_name               = local.cluster_name
+  cluster_version            = var.cluster_version
+  subnet_ids                 = module.network.private_subnet_ids
+  cluster_role_arn           = module.iam_roles.cluster_role_arn
+  node_role_arn              = module.iam_roles.node_role_arn
+  ebs_csi_role_arn           = module.iam_roles.ebs_csi_role_arn
+  aws_lb_controller_role_arn = module.iam_roles.aws_lb_controller_role_arn
+  external_secrets_role_arn  = module.iam_roles.external_secrets_role_arn
+  argocd_ecr_role_arn        = module.iam_roles.argocd_ecr_role_arn
+  admin_principal_arn        = var.admin_principal_arn
 }
 
 module "rds" {
@@ -46,6 +58,7 @@ module "rds" {
   vpc_id                    = module.network.vpc_id
   db_subnet_ids             = module.network.db_subnet_ids
   cluster_security_group_id = module.eks.cluster_security_group_id
+  ssm_kms_key_id            = module.secrets.kms_key_id
 }
 
 module "dns" {

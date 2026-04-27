@@ -24,7 +24,7 @@ variable "admin_principal_arn" {
 variable "cluster_version" {
   description = "EKS Kubernetes version."
   type        = string
-  default     = "1.32"
+  default     = "1.35"
 }
 
 variable "domain_name" {
